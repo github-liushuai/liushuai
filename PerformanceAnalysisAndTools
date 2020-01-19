@@ -135,6 +135,66 @@ CPU状态：CPU的使用率，显示了用户占比，系统占比、空闲占�
 分页统计：系统的分页活动，分别显示换入（in）和换出（out），一个较大的分页表明系统正在使用大量的交换空间，理想情况下page in（换入）和page out（换出）的值是0
 系统统计：统计中断（int）和上下文切换（csw）
 
+4）iotop
+通过iostat和dstat我们可以知道系统的当前IO负载，但是要知道IO负载具体是由哪个进程产生的可以通过iotop命令
+用法与top相似，也可以使用非交互式的方式使用：iotop -bod interval
+
+5）pidstat
+进程粒度的状态信息
+用法1：pidstat -d interval 与iotop -bod interval返回相似
+用法2：pidstat -u interval 统计CPU使用信息
+用法3：pidstat -r interval 统计内存信息
+
+6）top
+#top
+top - 15:26:35 up 165 days, 18:05, 11 users,  load average: 0.00, 0.03, 0.12
+Tasks: 660 total,   1 running, 659 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  0.1 us,  0.1 sy,  0.0 ni, 99.8 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+KiB Mem : 19787744+total,  8208520 free,  2842900 used, 18682601+buff/cache
+KiB Swap:        0 total,        0 free,        0 used. 18633395+avail Mem
+   PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND
+  7433 root      20   0  391248   9272   2204 S   0.7  0.0 984:37.36 alisentry_cli
+ 33813 root      39  19 4398380 251604   5284 S   0.7  0.1   2169:56 argusagent
+ 75360 root      20   0  168748   2944   1612 R   0.7  0.0   0:00.51 top
+ 41756 root      20   0 3777592  63708  11704 S   0.3  0.0 250:53.78 dockerd
+ 55178 root      20   0 2555140  16544   2788 S   0.3  0.0  32:58.34 staragentd
+ 汇总区域显示了五个方面的系统性能信息： 
+ 1. 负载：时间，登录用户数，系统平均负载 
+ 2. 进程：运行，睡眠，停止，僵尸 
+ 3. CPU ：用户态，核心态，NICE，空闲，等待IO，中断等 
+ 4. 内存：总量，已用，空闲（系统角度），缓冲，缓存 
+ 5. 交换分区：总量，已用，空闲
+ 
+ 任务区域默认显示：
+ 进程ID，有效用户，进程优先级，NICE值，进程使用的虚拟内存、物理内存、共享内存，进程状态，CPU 占用率，内存占用率，累计CPU时间，进程命令行信息
+
+7）mpstat
+用来统计多核处理器中，每一个处理器的使用情况，常见用法如下：
+mpstat -P ALL interval times
+
+8）netstat
+用于显示与IP、TCP、UDP和ICMP协议相关的统计数据，一般用于检验本机各端口的网络连接情况
+常用方法：netstat -npl 上面这条命令可以查看你要打开的端口是否已经打开，以此来作为程序是否已经启动的依据
+
+netstat -rn 打印路由表，其中 flag域的解释如下：
+U 该路由可用
+G 该路由是到一个到网关（路由器）。如果没有设置该标志，说明目的地址是直接相连的
+H 该路由是到一个主机
+D 该路由是由重定向报文创建
+M 该路由已被重定向报文修改
+
+netstat -in 系统上的接口信息，打印每个接口的MTU,输入分组数，输入错误，输出分组数，输出错误，冲突以及当前的输出队列的长度
+
+
+
+
+
+
+
+
+
+
+
 
 
 
