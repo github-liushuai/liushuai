@@ -1,0 +1,70 @@
+Ansible 执行自动化任务，分为以下两种执行模式：
+（1）ad-hoc（单个模块），单条命令的批量执行，或者叫命令行模式；
+（2）playbook，为面向对象的编程，可以把多个想要执行的任务放到一个 playbook 中，当然多个任务在事物逻辑上最好是有上下关联的，通过多个任务可以完成一个总体的目标
+
+Ansible 的安装非常简单，直接yum就可以
+[root@master ~]# yum install epel-release
+[root@master ~]# yum install ansible
+
+安装好的 Ansible 配置文件位于 /etc/ansible 目录下，需要重点关注的有 ansible.cfg、hosts（/etc/ansible/hosts）文件
+hosts 文件主要用来定义 Ansible 批量操作的主机列表，最简单的写法如下，分了两个组 webservers 和 dbservers 组：
+--------------------
+[webservers]
+ixdba1.net
+ixdba2.net 
+[dbservers]
+db.ixdba1.net
+db.ixdba2.net
+--------------------
+也可在 hosts 文件中，指定主机的范围，示例如下：
+--------------------
+[web]
+www[01:50].ixdba.net
+[db]
+db[a:f].ixdba.ent
+--------------------
+还可以使用变量，变量分为主机变量和组变量两种类型，主要用来指定ssh时的一些配置（端口号、用户、密码、shell类型、解释器路径等），下面的例子是使用主机变量来指定执行ssh时使用的密码：
+--------------------
+[test]
+192.168.1.1 ansible_ssh_user=root ansible_ssh_pass='abc123'
+192.168.1.2 ansible_ssh_user=breeze ansible_ssh_pass='123456'
+--------------------
+
+ansible.cfg 文件定义了 Ansible 主机的默认配置，比如默认是否需要输入密码、是否开启 sudo 认证、action_plugins 插件的位置、hosts 主机组的位置、是否开启 log 功能、默认端口、key 文件位置等。一般情况下这个文件无需修改，保存默认即可
+注意：host_key_checking 表示是否关闭第一次使用 Ansible 连接客户端时 yes/no 的连接确认提示，False 表示关闭，我们只需要去掉此选项的注释即可。
+这个问题其实是 SSH 连接的问题，因为 Linux 下的主机在第一次 SSH 连接到一个新的主机时，一般会需要 yes/no 的连接确认，这在自动化运维中是不需要的，因此需要禁止这种确认。在 Ansible 中通过设置 host_key_checking 为 False 就可以避免这种情况
+
+命令行下执行 ansible，基本格式如下：
+  ansible 主机或组 -m 模块名 -a '模块参数' ansible参数
+其中：
+  主机或组，在 /etc/ansible/hosts 里进行指定；
+  模块名，可以通过 ansible-doc -l 查看目前安装的模块，默认不指定时，使用的是 command 模块；
+  模块参数，可以通过 “ansible-doc 模块名”查看具体用法
+
+Ansible 常用模块介绍：
+1）commands：到远程主机上执行指定命令，command 模块的几个选项
+    creates，后跟一个文件名，当远程主机上存在这个文件时，该命令不执行，否则执行；
+    chdir，在执行指令之前，先切换到该指定的目录；
+    removes，后跟一个文件名，当该文件存在时，该选项执行，否则不执行
+  例如：
+    ansible 172.16.213.157 -m command  -a 'pwd'
+    ansible 172.16.213.157 -m command  -a 'chdir=/var/www tar zcvf /data/html.tar.gz html'
+    ansible 172.16.213.157  -m command  -a 'creates=/tmp/tmp.txt date'
+    ansible 172.16.213.157  -m command  -a 'removes=/tmp/tmp.txt date'
+  注意：commands 模块的执行，在远程主机上，需有 Python 环境的支持
+       该模块通过在 -a 参数后面跟上要在远程机器上执行的命令即可完成远程操作，不过命令里如果带有特殊字符（“<”、“>”、“|”、“&”等），则执行不成功，也就是 commands 模块不支持这些特殊字符
+
+2）shell：shell 模块的功能和用法与 command 模块一样，不过 shell 模块执行命令的时候使用的是 /bin/sh，该模块可以执行任何命令，即不存在上述commands模块 命令不能带特殊字符 的限制
+3）raw
+4）script
+5）file
+6）copy
+7）synchronize
+8）cron
+9）yum
+10）service
+11）setup
+12）user
+13）group
+
+
