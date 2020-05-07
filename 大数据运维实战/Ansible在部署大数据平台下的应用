@@ -55,16 +55,16 @@ Ansible 常用模块介绍：
        该模块通过在 -a 参数后面跟上要在远程机器上执行的命令即可完成远程操作，不过命令里如果带有特殊字符（“<”、“>”、“|”、“&”等），则执行不成功，也就是 commands 模块不支持这些特殊字符
 
 2）shell：shell 模块的功能和用法与 command 模块一样，不过 shell 模块执行命令的时候使用的是 /bin/sh，该模块可以执行任何命令，即不存在上述commands模块 命令不能带特殊字符 的限制
-3）raw
-4）script
-5）file
-6）copy
-7）synchronize
-8）cron
-9）yum
-10）service
-11）setup
-12）user
-13）group
+3）raw：raw 模块功能与 command 和 shell 模块类似，shell 能够完成的操作，raw 也都能完成，不同的是，raw 模块不需要远程主机上的 Python 环境，若有些机器根本安装不了 Python 的话（如交换机、路由器等），那么，直接用 raw 模块是最好的选择
+4）script：script 模块是将管理端的 shell 脚本拷贝到被管理的远程主机上执行，其原理是先将 shell 复制到远程主机，再在远程主机上执行，此模块的执行，不需要远程主机上的 Python 环境
+5）file：主要用于远程主机上的文件或目录操作，创建、删除、授权等操作
+6）copy：用来复制文件到远程主机，有备份选项、是否强制覆盖选项
+7）synchronize：copy模块复制文件很慢，synchronize模块通过调用 rsync 进行文件或目录同步，同步速度很快，前提是目标主机必须有rsync命令
+8）cron：用于管理计划任务，有备份选项
+9）yum：通过 yum 包管理器来管理软件包
+10）service：用于管理远程主机上的服务
+11）setup：收集远程主机的系统信息，如 IP 地址、操作系统版本、网络设备、Mac 地址、内存、磁盘、硬件等信息，我们可以根据目标主机各系统信息不同来分组，分别进行不同的操作
+12）user：user 模块请求的是 useradd、userdel、usermod 三个指令
+13）group：group 模块请求的是 groupadd、groupdel、groupmod 三个指令
 
 
