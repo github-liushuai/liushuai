@@ -1,1 +1,16 @@
+加电后，加载主板上的ROM以进入BIOS
 
+BIOS阶段主要做两件事，一是硬件检测，二是查找启动盘的第一个扇区即MBR
+  如何确定启动盘：一个扇区是512字节，如果这块盘的第一个扇区的最后两个字节是0xAA55，那么这个盘就是启动盘，这是公共的约定
+    
+从MBR读取grub引导程序，即从MBR安装boot.img
+  MBR由三部分组成
+    BootLoader：446字节，即boot.img
+    Partition table：64字节（由四个分区表项构成，每个16个字节），负责说明磁盘上的分区情况，其内容由磁盘介质及用户在使用FDISK定义分区时决定
+    结束标志：2字节，魔数，0xAA55
+
+grub2引导阶段，做这么几件事
+  boot.img的唯一作用就是装载core.img（diskboot.img + lzma_decompress.img + kernel.img不是linux内核 + modules&others），这是grub2的核心映像文件，加载过程中由于要解压lzma_decompress.img需要比较大的内存空间，所以需要打开第21根地址线切换到保护模式
+  加载一些动态模块
+  加载grub.conf配置文件，这个配置文件对应了选择系统的那个页面，到这里可以选择进入哪个系统了
+ 
