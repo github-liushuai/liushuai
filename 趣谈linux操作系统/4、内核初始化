@@ -1,1 +1,7 @@
-
+启动从入口函数start_kernel() 开始，相当于内核的 main 函数，主要进行以下初始化操作
+  init_task
+  trap_init
+  mm_init
+  sched_init
+  rest_init
+  
