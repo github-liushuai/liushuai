@@ -13,4 +13,13 @@ grub2引导阶段，做这么几件事
   boot.img的唯一作用就是装载core.img（diskboot.img + lzma_decompress.img + kernel.img不是linux内核 + modules&others），这是grub2的核心映像文件，加载过程中由于要解压lzma_decompress.img需要比较大的内存空间，所以需要打开第21根地址线切换到保护模式
   加载一些动态模块
   加载grub.conf配置文件，这个配置文件对应了选择系统的那个页面，到这里可以选择进入哪个系统了
+  
+加载内核，这部分下一节具体说
+
+systemd初始化
+  systemd执行sysinit.target，与默认运行级别有关
+  systemd启动multi-user.target下的本机与服务器服务
+  systemd执行multi-user.target下面的/etc/rc.d/rc.local，用户自定义脚本
+  Systemd执行multi-user.target下的getty.target及登录服务，getty.target我们也眼熟，它是启动终端的systemd对象
+如果到此步骤，系统没有指定启动图形桌面，到此就可以结束了，如果需要启动图形界面，要在此基础上启动桌面程序
  
