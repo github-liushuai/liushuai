@@ -20,5 +20,6 @@ Docker 又是如何做到把一个宿主机上的目录或者文件，挂载到�
    更重要的是，由于执行这个挂载操作时，“容器进程”已经创建了，也就意味着此时Mount Namespace 已经开启了，所以这个挂载事件只在这个容器里可见，你在宿主机上，是看不见容器内部的这个挂载点的，这就保证了容器的隔离性不会被 Volume 打破
    注意：这里提到的 " 容器进程 "，是 Docker 创建的一个容器初始化进程(dockerinit)，而不是应用进程 (ENTRYPOINT + CMD)。dockerinit 会负责完成根目录的准备、挂载设备和目录、配置 hostname 等一系列需要在容器内进行的初始化操作。最后，它通过 execv() 系统调用，让应用进程取代自己，成为容器里的 PID=1 的进程
 
-挂载的内容会不会被docker commit提交掉呢？
-答：不会， docker commit，都是发生在宿主机空间的
+挂载点/test 目录里的内容会不会被docker commit提交掉呢？
+答：不会， docker commit都是发生在宿主机空间的，由于 Mount Namespace 的隔离作用，宿主机并不知道这个绑定挂载的存在，所以，在宿主机看来，容器中可读写层的 /test 目录（/var/lib/docker/aufs/mnt/[可读写层 ID]/test），始终是空的
+   不过，由于 Docker 一开始还是要创建 /test 这个目录作为挂载点，所以执行了 dockercommit 之后，你会发现新产生的镜像里，会多出来一个空的 /test 目录
