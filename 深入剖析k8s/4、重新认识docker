@@ -11,5 +11,14 @@ Volume 机制：
 Volume 声明方式：
 1、docker run -v /test
 2、docker run -v /home:/test
-第一种
+第一种方式会在宿主机生成一个随机目录（/var/lib/docker/volumes/[VOLUME_ID]/_data）挂载到容器内部
+第二种是指定宿主机上到目录挂载到容器内部
 
+Docker 又是如何做到把一个宿主机上的目录或者文件，挂载到容器里面去呢？
+答：绑定挂载（bind mount）机制，绑定挂载实际上是一个 inode 替换的过程
+   我们只需要在 rootfs 准备好之后，在执行 chroot 之前，把 Volume 指定的宿主机目录（比如 /home 目录），挂载到指定的容器目录（比如 /test 目录）在宿主机上对应的目录（即 /var/lib/docker/aufs/mnt/[可读写层 ID]/test）上，这个 Volume 的挂载工作就完成了
+   更重要的是，由于执行这个挂载操作时，“容器进程”已经创建了，也就意味着此时Mount Namespace 已经开启了，所以这个挂载事件只在这个容器里可见，你在宿主机上，是看不见容器内部的这个挂载点的，这就保证了容器的隔离性不会被 Volume 打破
+   注意：这里提到的 " 容器进程 "，是 Docker 创建的一个容器初始化进程(dockerinit)，而不是应用进程 (ENTRYPOINT + CMD)。dockerinit 会负责完成根目录的准备、挂载设备和目录、配置 hostname 等一系列需要在容器内进行的初始化操作。最后，它通过 execv() 系统调用，让应用进程取代自己，成为容器里的 PID=1 的进程
+
+挂载的内容会不会被docker commit提交掉呢？
+答：不会， docker commit，都是发生在宿主机空间的
