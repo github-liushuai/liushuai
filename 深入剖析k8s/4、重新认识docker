@@ -1,1 +1,15 @@
+使用dockerfile制作docker镜像时，如果不指定ENTRYPOINT，Docker 会为你提供一个隐含的 ENTRYPOINT，即：/bin/sh -c，而CMD 的内容就是 ENTRYPOINT 的参数
+Dockerfile 中的每个原语执行后，都会生成一个对应的镜像层。即使原语本身并没有明显地修改文件的操作（比如，ENV 原语），它对应的层也会存在
+
+docker exec 是怎么做到进入容器里的呢？
+答：一个进程，可以选择加入到某个进程已有的 Namespace 当中，从而达到“进入”这个进程所在容器的目的，这正是 docker exec 的实现原理
+   而这个操作所依赖的，乃是一个名叫 setns() 的 Linux 系统调用
+
+Volume 机制：
+允许你将宿主机上指定的目录或者文件，挂载到容器里面进行读取和修改操作
+
+Volume 声明方式：
+1、docker run -v /test
+2、docker run -v /home:/test
+第一种
 
