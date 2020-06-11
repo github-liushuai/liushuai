@@ -30,7 +30,8 @@ kubeadm使用简介：
     6）安装默认插件
       Kubernetes 默认 kube-proxy 和 DNS这两个插件是必须安装的。它们分别用来提供整个集群的服务发现和 DNS 功能
       其实，这两个插件也只是两个容器镜像而已，所以 kubeadm 只要用 Kubernetes 客户端创建两个Pod 就可以了
-3、使用“kubeadm join”添加Node节点
+3、使用“kubeadm join ...”添加Node节点
+  主要做了这两件事：
     1）拿到保存在 ConfigMap 中的 cluster-info（它保存了 APIServer 的授权信息）
     2）有了 cluster-info 里的 kube-apiserver 的地址、端口、证书，kubelet 就可以以“安全模式”连接到 apiserver 上，这样就可以进行添加节点的操作了
 
