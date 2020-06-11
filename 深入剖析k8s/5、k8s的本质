@@ -2,9 +2,8 @@ k8s项目架构由Master 和 Node两种节点构成
 Master
   kube-apiserver：负责API服务
   kube-scheduler：负责调度
-  kube-controller-manager：负责容器编排
-  
-Etcd：整个集群的持久化数据，由 kube-apiserver 处理后保存在 Etcd中
+  kube-controller-manager：负责容器编排  
+  Etcd：整个集群的持久化数据，由 kube-apiserver 处理后保存在 Etcd中
   
 Node
   Networking：kubelet调用CNI（Container NetworkingInterface）接口为容器配置网络
