@@ -68,6 +68,153 @@ Pod 对象的 Status 字段，还可以再细分出一组 Conditions。这些细
 比如，Pod 当前的 Status 是 Pending，对应的 Condition 是 Unschedulable，这就意味着它的调度出现了问题
 而其中，Ready 这个细分状态非常值得我们关注：它意味着 Pod 不仅已经正常启动（Running 状态），而且已经可以对外提供服务了。这两者之间（Running 和 Ready）是有区别的
   
+Projected Volume（投射数据卷），Kubernetes v1.11 之后的新特性：
+有几种特殊的 Volume，作用是为容器提供预先定义好的数据，从容器的角度来看，这些 Volume 里的信息就是仿佛是被Kubernetes“投射”（Project）进入容器当中的
+到目前为止，Kubernetes 支持的 Projected Volume 一共有四种：
+  1. Secret；
+  """
+  ...
+    volumeMounts:
+    - name: mysql-cred      
+      mountPath: "/projected-volume"      
+      readOnly: true
+  ...
+  volumes:
+  - name: mysql-cred    
+    projected:      
+      sources:      
+      - secret:          
+        name: user
+      - secret:          
+        name: pass
+  """
+  Volume 的数据来源（sources），是名为 user 和 pass 的 Secret 对象，分别对应的是数据库的用户名和密码
+  这里用到的数据库的用户名、密码，正是以 Secret 对象的方式交给 Kubernetes 保存的，完成这个操作的指令，如下所示：
+  """
+  $ cat ./username.txtadmin
+  $ cat ./password.txtc1oudc0w!
+  $ kubectl create secret generic user --from-file=./username.txt
+  $ kubectl create secret generic pass --from-file=./password.txt
   
+  或者使用以下YAML文件来创建，需要注意的是，Secret 对象要求这些数据必须是经过 Base64 转码的，以免出现明文密码的安全隐患
   
+  apiVersion: v1
+  kind: Secret
+  metadata:  
+    name: mysecret
+  type: Opaque
+  data:  
+    user: YWRtaW4=  
+    pass: MWYyZDFlMmU2N2Rm
+  """
+  pod创建出来之后，可以在/projected-volume 目录下看到两个文件，分别明文记录了两个value，文件名为key
+  像这样通过挂载方式进入到容器里的 Secret，一旦其对应的 Etcd 里的数据被更新，这些 Volume 里的文件内容，同样也会被更新，其实，这是 kubelet 组件在定时维护这些 Volume
+  
+  2. ConfigMap；
+  与 Secret 类似，它与 Secret 的区别在于，ConfigMap 保存的是不需要加密的、应用所需的配置信息，而 ConfigMap 的用法几乎与 Secret 完全相同
+  你可以使用 kubectl create configmap 从文件或者目录创建 ConfigMap，也可以直接编写ConfigMap 对象的 YAML 文件
+  
+  3. Downward API；
+  让 Pod 里的容器能够直接获取到这个 Pod API对象本身的信息
+  """
+  ...
+        volumeMounts:
+          - name: podinfo          
+            mountPath: /etc/podinfo          
+            readOnly: false
+    volumes:    
+      - name: podinfo      
+        projected:        
+          sources:        
+          - downwardAPI:            
+            items:              
+              - path: "labels"                
+                fieldRef:                  
+                  fieldPath: metadata.labels    
+  """
+  通过这样的声明方式，当前 Pod 的 Labels 字段的值，就会被 Kubernetes 自动挂载成为容器里的 /etc/podinfo/labels 文件
+  目前，Downward API 支持的字段已经非常丰富了，比如:
+  """
+  1)使用 fieldRef 可以声明使用:
+  spec.nodeName - 宿主机名字
+  status.hostIP - 宿主机 
+  IPmetadata.name - Pod 的名字
+  metadata.namespace - Pod 的 Namespace
+  status.podIP - Pod 的 IP
+  spec.serviceAccountName - Pod 的 Service Account 的名字
+  metadata.uid - Pod 的 UID
+  metadata.labels['<KEY>'] - 指定 <KEY> 的 Label 值
+  metadata.annotations['<KEY>'] - 指定 <KEY> 的 Annotation 值
+  metadata.labels - Pod 的所有 Label
+  metadata.annotations - Pod 的所有 Annotation
+  2)使用 resourceFieldRef 可以声明使用:
+  容器的 CPU limit
+  容器的 CPU request
+  容器的 memory limit
+  容器的 memory request
+  """
+  随着 Kubernetes 项目的发展肯定还会不断增加。所以这里列出来的信息仅供参考，你在使用 Downward API 时，还是要记得去查阅一下官方文档
+  需要注意的是，Downward API 能够获取到的信息，一定是 Pod 里的容器进程启动之前就能够确定下来的信息
+  
+  4. ServiceAccountToken
+  Service Account 对象的作用，就是 Kubernetes 系统内置的一种“服务账户”，它是Kubernetes 进行权限分配的对象
+  像这样的 Service Account 的授权信息和文件，实际上保存在它所绑定的一个特殊的Secret 对象里的，这个特殊的 Secret 对象，就叫作ServiceAccountToken
+  k8s会默认为每个pod挂载一个类型是 Secret、名为 default-token-xxxx 的 Volume，在容器的/var/run/secrets/kubernetes.io/serviceaccount 内
+  这种把 Kubernetes 客户端以容器的方式运行在集群里，然后使用 default ServiceAccount 自动授权的方式，被称作“InClusterConfig”
+  当然，考虑到自动挂载默认 ServiceAccountToken 的潜在风险，Kubernetes 允许你设置默认不为 Pod 里的容器自动挂载这个 Volume
+  
+容器健康检查和恢复机制：
+livenessProbe（健康检查）
+  """
+  ...
+      - touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 600
+      livenessProbe:      
+        exec:        
+          command:        
+          - cat        
+          - /tmp/healthy      
+        initialDelaySeconds: 5      
+        periodSeconds: 5
+
+  """
+  配置如上健康检查，会在容器启动（initialDelaySeconds）5秒之后，每隔（periodSeconds）5秒执行“cat /tmp/healthy”，如果这个文件存在，这条命令的返回值就是 0，Pod 就会认为这个容器不仅已经启动，而且是健康的
+  如果我们观察pod的event，会发现容器启动一会之后会有unhealth的信息，但容器的状态还是running，只是RESTARTS 字段从 0 到 1 的变化：这个异常的容器已经被 Kubernetes 重启了，在这个过程中，Pod 保持 Running 状态不变
+  这个功能就是 Kubernetes 里的Pod 恢复机制，也叫 restartPolicy：
+  它是 Pod 的 Spec 部分的一个标准字段（pod.spec.restartPolicy），默认值是 Always，即任何时候这个容器发生了异常，它一定会被重新创建
+    但一定要强调的是，Pod 的恢复过程，永远都是发生在当前节点上，而不会跑到别的节点上去。事实上，一旦一个 Pod 与一个节点（Node）绑定，除非这个绑定发生了变化（pod.spec.node 字段被修改），否则它永远都不会离开这个节点
+    这也就意味着，如果这个宿主机宕机了，这个 Pod 也不会主动迁移到其他节点上去
+    而如果你想让 Pod 出现在其他的可用节点上，就必须使用 Deployment 这样的“控制器”来管理 Pod，哪怕你只需要一个 Pod 副本
+  除了 Always，它还有 OnFailure 和 Never 两种情况：
+    Always：在任何情况下，只要容器不在运行状态，就自动重启容器；
+    OnFailure: 只在容器 异常时才自动重启容器；
+    Never: 从来不重启容器
+  对于restartPolicy 和 Pod 里容器的状态，以及Pod 状态的对应关系，只需要记住以下两点：
+    1. 只要 Pod 的 restartPolicy 指定的策略允许重启异常的容器（比如：Always），那么这个 Pod 就会保持 Running 状态，并进行容器重启。否则，Pod 就会进入 Failed 状态 
+    2. 对于包含多个容器的 Pod，只有它里面所有的容器都进入异常状态后，Pod 才会进入Failed 状态
+    
+  除了在容器中执行命令外，livenessProbe 也可以定义为发起 HTTP 或者 TCP 请求的方式
+  
+ReadinessProbe：检查结果的成功与否，决定的这个 Pod 是不是能被通过 Service 的方式访问到，而并不影响 Pod 的生命周期，如果ReadinessProbe探针检测到失败，则Pod的状态被修改
+               Endpoint Controller将从Service的Endpoint中删除包含该容器所在Pod的Endpoint
+               
+PodPreset（Pod 预设置）：自动填充pod信息字段
+  """
+  ...
+  kind: PodPreset
+  ...
+  spec:  
+    selector:    
+      matchLabels:      
+        role: frontend  
+    env:    
+      - name: DB_PORT      
+        value: "6379"
+  ...
+  """
+  在这个 PodPreset 的定义中，首先是一个 selector，这就意味着后面这些追加的定义，只会作用于 selector 所定义的、带有“role: frontend”标签的 Pod 对象
+  PodPreset 里定义的内容，只会在 Pod API 对象被创建之前追加在这个对象本身上，而不会影响任何 Pod 的控制器的定义
+  我们现在提交的是一个 nginx-deployment，那么这个 Deployment 对象本身是永远不会被 PodPreset 改变的，被修改的只是这个 Deployment 创建出来的所有 Pod
+  
+  如果你定义了同时作用于一个 Pod 对象的多个 PodPreset，Kubernetes 项目会帮你合并（Merge）这两个 PodPreset 要做的修改。而如果它们要做的修改有冲突的话，这些冲突字段就不会被修改
+
 
