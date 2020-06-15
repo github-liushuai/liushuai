@@ -2,6 +2,14 @@ deployment -- ReplicaSet -- pod
 deployment是通过这种两层关系来实现对pod的控制，从而实现“水平扩展/收缩” 和 “滚动更新”的功能
 Deployment 对应用进行版本控制是通过ReplicaSet来实现的，因为“应用版本和 ReplicaSet 一一对应”，每一次更新操作都会生成一个新的 ReplicaSet 对象
 
+简单描述一个滚动更新的例子：
+首先，当你修改了 Deployment 里的 Pod 定义之后，Deployment Controller会使用这个修改后的 Pod 模板，创建一个新的 ReplicaSet，这个新的 ReplicaSet 的初始 Pod 副本数是：0
+然后，在 Age=24 s 的位置，Deployment Controller 开始将这个新的 ReplicaSet 所控制的 Pod 副本数从 0 个变成 1 个，即：“水平扩展”出一个副本。
+紧接着，在 Age=22 s 的位置，Deployment Controller 又将旧的ReplicaSet（hash=3167673210）所控制的旧 Pod 副本数减少一个，即：“水平收缩”成两个副本。
+如此交替进行，新 ReplicaSet 管理的 Pod 副本数，从 0 个变成 1 个，再变成 2 个，最后变成 3 个。而旧的 ReplicaSet 管理的 Pod 副本数则从 3 个变成 2 个，再变成 1 个，最后变成 0 个。
+这样，就完成了这一组 Pod 的版本升级过程
+像这样，将一个集群中正在运行的多个 Pod 版本，交替地逐一升级的过程，就是“滚动更新”
+
 在创建deployment的时候，可以在命令行后面指定 --record参数，这样会记录下对这个deployment 每次操作所执行的命令
 
 使用 kubectl rollout history 命令，可以查看每次 Deployment 变更对应的版本
