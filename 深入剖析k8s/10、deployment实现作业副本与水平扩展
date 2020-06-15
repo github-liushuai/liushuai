@@ -1,1 +1,25 @@
+deployment -- ReplicaSet -- pod
+deployment是通过这种两层关系来实现对pod的控制，从而实现“水平扩展/收缩” 和 “滚动更新”的功能
+Deployment 对应用进行版本控制是通过ReplicaSet来实现的，因为“应用版本和 ReplicaSet 一一对应”，每一次更新操作都会生成一个新的 ReplicaSet 对象
+
+在创建deployment的时候，可以在命令行后面指定 --record参数，这样会记录下对这个deployment 每次操作所执行的命令
+
+使用 kubectl rollout history 命令，可以查看每次 Deployment 变更对应的版本
+"""
+$ kubectl rollout history deployment/nginx-deployment
+deployments "nginx-deployment"
+REVISION    CHANGE-CAUSE
+1           kubectl create -f nginx-deployment.yaml --record
+2           kubectl edit deployment/nginx-deployment
+3           kubectl set image deployment/nginx-deployment nginx=nginx:1.91
+"""
+然后可以使用 kubectl rollout undo 命令行最后，加上要回滚到的指定版本的版本号，就可以回滚到指定版本了
+"""
+$ kubectl rollout undo deployment/nginx-deployment --to-revision=2
+deployment.extensions/nginx-deployment
+"""
+
+不过，你可能已经想到了一个问题：我们对 Deployment 进行的每一次更新操作，都会生成一个新的 ReplicaSet 对象，是不是有些多余，甚至浪费资源呢？
+Deployment 对象有一个字段，叫作 spec.revisionHistoryLimit，就是Kubernetes 为 Deployment 保留的“历史版本”个数；
+但是，如果把它设置为 0，你就再也不能做回滚操作了
 
