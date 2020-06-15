@@ -31,3 +31,6 @@ deployment.extensions/nginx-deployment
 Deployment 对象有一个字段，叫作 spec.revisionHistoryLimit，就是Kubernetes 为 Deployment 保留的“历史版本”个数；
 但是，如果把它设置为 0，你就再也不能做回滚操作了
 
+金丝雀发布：先发布一台机器或少量机器，做流量验证，如果新版没问题在把剩余机器全部更新。优点是影响范围小，不足的是要自己想办法如何控制自动更新
+蓝绿部署：事先准备好一组机器(绿组)全部更新，然后调整LB将流量全部引到绿组。优点是切换快捷回滚方便，不足的是有问题则影响全部用户
+
