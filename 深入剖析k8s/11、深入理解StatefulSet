@@ -1,1 +1,32 @@
+Headless Service：
+  Service 是 Kubernetes 项目中用来将一组 Pod 暴露给外界访问的一种机制，有以下两种方式
+  1、以 Service 的 VIP（Virtual IP，即：虚拟 IP）方式
+  2、以 Service 的 DNS 方式，这种方式又可以分为两种方式
+    1）Normal Service，这种情况下你访问“my-svc.my-namespace.svc.cluster.local”解析到的，正是 my-svc 这个 Service 的 VIP，后面的流程就跟 VIP 方式一致了
+    2）正是 Headless Service。这种情况下，你访问“my-svc.my-namespace.svc.cluster.local”解析到的，直接就是 my-svc 代理的某一个 Pod 的 IP 地址；
+      可以看到，这里的区别在于，Headless Service 不需要分配一个 VIP，而是可以直接以 DNS 记录的方式解析出被代理 Pod 的 IP 地址
 
+StatefulSet把真实世界的应用抽象成两种情况：
+  1、拓扑状态：应用的多个实例A、B之间不是完全对等的关系，这些应用实例必须按照某些顺序启动，并且如果把 A和 B 两个 Pod 删除掉，它们再次被创建出来时也必须严格按照这个顺序才行，并且新创建出来的 Pod必须和原来 Pod 的网络标识一样
+  2、存储状态：应用的多个实例分别绑定了不同的存储数据
+  
+  对于拓扑状态，StatefulSet主要通过给它所管理的所有 Pod 的名字进行了编号来保证的，比如第一个生成的Pod为web-0、第二个为web-1，且在web-0状态达到Ready之前web-1都会处于Pending状态；
+  对于网络标识的保证，可以在声明StatefulSet时使用Headless Service（先创建Headless Service，然后在声明StatefulSet时指定serviceName: "xxx"）来保证，这样会为每个Pod生成对应的DNS解析，哪怕Pod被删除后重新创建，解析记录也会随之更新，仍然指向这个Pod
+  
+  对于存储状态，主要通过PVC和PV来保证
+  创建PV -- 创建PVC（可以手动创建，对于StatefulSet也可免去这一步由其自动创建） -- Pod声明使用PVC
+  PVC和PV这种解藕的做法，避免了因为向开发者暴露过多的存储系统细节而带来的隐患，开发者只要知道并会使用“接口”，即：PVC；而运维人员则负责给“接口”绑定具体的实现，即：PV；
+  此外，这种职责的分离，往往也意味着出现事故时可以更容易定位问题和明确责任，从而避免“扯皮”现象的出现
+  PVC都以“<PVC 名字 >-<StatefulSet 名字 >-< 编号 >”的方式命名，跟Pod名一一对应，当Pod被删除后会被按照编号的顺序被重新创建出来，且还跟对应的PVC进行绑定（Pod删除之后，这个 Pod 对应的 PVC 和 PV并不会被删除）
+  
+  到这里，可以总结一下StatefulSet 的工作原理：
+  1、StatefulSet 的控制器直接管理的是 Pod
+  2、Kubernetes 通过 Headless Service，为这些有编号的 Pod，在 DNS 服务器中生成带有同样编号的 DNS 记录
+  3、StatefulSet 还为每一个 Pod 分配并创建一个同样编号的 PVC
+  
+  我们不难看出 StatefulSet 的设计思想：StatefulSet 其实就是一种特殊的Deployment，而其独特之处在于，它的每个 Pod 都被编号了；
+  而且，这个编号会体现在Pod 的名字和 hostname 等标识信息上，这不仅代表了 Pod 的创建顺序，也是 Pod 的重要网络标识（即：在整个集群里唯一的、可被的访问身份）；
+  有了这个编号后，StatefulSet 就使用 Kubernetes 里的两个标准功能：Headless Service和 PV/PVC，实现了对 Pod 的拓扑状态和存储状态的维护
+  
+
+  
