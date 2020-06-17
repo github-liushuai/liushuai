@@ -3,7 +3,7 @@ Headless Service：
   1、以 Service 的 VIP（Virtual IP，即：虚拟 IP）方式
   2、以 Service 的 DNS 方式，这种方式又可以分为两种方式
     1）Normal Service，这种情况下你访问“my-svc.my-namespace.svc.cluster.local”解析到的，正是 my-svc 这个 Service 的 VIP，后面的流程就跟 VIP 方式一致了
-    2）正是 Headless Service。这种情况下，你访问“my-svc.my-namespace.svc.cluster.local”解析到的，直接就是 my-svc 代理的某一个 Pod 的 IP 地址；
+    2）正是 Headless Service，这种情况下，你访问“my-svc.my-namespace.svc.cluster.local”解析到的，直接就是 my-svc 代理的某一个 Pod 的 IP 地址；
       可以看到，这里的区别在于，Headless Service 不需要分配一个 VIP，而是可以直接以 DNS 记录的方式解析出被代理 Pod 的 IP 地址
 
 StatefulSet把真实世界的应用抽象成两种情况：
@@ -42,8 +42,13 @@ StatefulSet把真实世界的应用抽象成两种情况：
   2、Master 节点和 Salve 节点需要能够传输备份信息文件；
   3、在 Slave 节点第一次启动之前，需要执行一些初始化 SQL 操作
   
-  对于第一点我们只需要通过cm准备两份不同的配置文件，然后通过Pod编号的的区别分别挂载进去即可，具体实现是通过一个initContainers，先获取到Pod的编号，通过编号来判断到底挂载哪个配置文件；
+  首先我们创建两个Service，第一个是Normal Service，这是为了实现读操作可以分摊到所有Pod
+  第二个是Headless Service，这是为了在 Slave Pod 启动前，从 Master 或者其他 Slave Pod 里拷贝数据库数据到自己的目录下（第一个Slave从Msater那里获取，第二个Slave从第一个Slave那里获取）
   
+  对于第一点，我们只需要通过cm准备两份不同的配置文件，然后通过Pod编号的的区别分别挂载进去即可，具体实现是通过一个initContainers，先获取到Pod的编号，通过编号来判断到底挂载哪个配置文件；
+  然后通过共享volume的方式，让真正的mysql容器挂载到这个配置文件
+  
+  对于第二点，
   
 
   
