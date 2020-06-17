@@ -98,3 +98,9 @@ parameters:
 而一旦你的应用没办法通过上述方式进行状态的管理，那就代表了 StatefulSet 已经不能解决它的部署问题了
 这时候，后面讲到的 Operator，可能才是一个更好的选择
   
+如何对 StatefulSet 进行“滚动更新”（rolling update）？
+很简单，只要修改 StatefulSet 的 Pod 模板，就会自动触发“滚动更新
+StatefulSet 的“滚动更新”还允许我们进行更精细的控制，比如金丝雀发布（Canary Deploy）或者灰度发布，这意味着应用的多个实例中被指定的一部分不会被更新到最新的版本；
+这个字段正是 StatefulSet 的 spec.updateStrategy.rollingUpdate 的 partition 字段
+比如将前面这个 StatefulSet 的 partition 字段设置为 2，那么进行滚动更新时只有序号大于或者等于 2 的 Pod 会被更新到新版本；
+并且，如果你删除或者重启了序号小于 2 的 Pod，等它再次启动后，也会保持旧版本
