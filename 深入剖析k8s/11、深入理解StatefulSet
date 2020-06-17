@@ -48,7 +48,20 @@ StatefulSet把真实世界的应用抽象成两种情况：
   对于第一点，我们只需要通过cm准备两份不同的配置文件，然后通过Pod编号的的区别分别挂载进去即可，具体实现是通过一个initContainers，先获取到Pod的编号，通过编号来判断到底挂载哪个配置文件；
   然后通过共享volume的方式，让真正的mysql容器挂载到这个配置文件
   
-  对于第二点，
+  对于第二点，首先需要第二个initContainers，根据Pod的编号来决定是否是Master，如果是则无需操作数据同步，如果是Slave则向前一个Pod同步数据
+  然后还需要一个“sidecar”容器来初始化Mysql容器，同时向外提供数据同步的功能，这个可以用到xtrabackup 镜像（它里面安装了 xtrabackup 开源 MySQL 备份和恢复工具）来提供
+  注：“sidecar”容器实际上就是普通的spec.containers，只不过我们把这种辅助性的容器称之为“sidecar”容器
+  在这个名叫 xtrabackup 的 sidecar 容器的启动命令里，其实实现了两部分工作：
+  1、MySQL 节点的初始化工作
+    对于第一个Slave需要解析这个备份信息文件，读取 MASTER_LOG_FILE 和 MASTER_LOG_POS 这两个字段的值，用它们拼装出初始化 SQL 语句
+    对于第二个Slave由xtrabackup工具在备份的时候，自动生成 "CHANGE MASTERTO" SQL 语句
+    总之最后结果就是两个Slave节点都要执行CHANGE MASTER TO”指令，再执行一句 START SLAVE 命令， Slave 节点就被成功启动了
+  2、启动一个数据传输服务
+  
+  对于
+  2、启动一个数据传输服务第三点
+  2、启动一个数据传输服务，
+  2、
   
 
   
