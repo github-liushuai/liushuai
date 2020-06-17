@@ -58,10 +58,9 @@ StatefulSet把真实世界的应用抽象成两种情况：
     总之最后结果就是两个Slave节点都要执行CHANGE MASTER TO”指令，再执行一句 START SLAVE 命令， Slave 节点就被成功启动了
   2、启动一个数据传输服务
   
-  对于
-  2、启动一个数据传输服务第三点
-  2、启动一个数据传输服务，
-  2、
+  对于第三点，有了前面的操作，MySQL 容器本身的定义就非常简单了，挂载以下前面initContainers准备好的配置文件和数据文件，配置一下livenessProbe 和 readinessProbe
+  livenessProbe通过 mysqladmin ping 命令来检查它是否健康；readinessProbe通过查询 SQL（select 1）来检查 MySQL 服务是否可用；
+  当然，凡是 readinessProbe 检查失败的 MySQL Pod，都会从 Service 里被摘除掉
   
 
   
