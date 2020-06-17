@@ -1,1 +1,31 @@
+Job需要在 Pod 模板中定义 restartPolicy=Never 的原因：离线计算的 Pod 永远都不应该被重启，否则它们会再重新计算一遍；
+事实上，restartPolicy 在 Job 对象里只允许被设置为 Never 和 OnFailure：
+  restartPolicy=Never，那么离线作业失败后 JobController 就会不断地尝试创建一个新 Pod；
+  restartPolicy=OnFailure，那么离线作业失败后，Job Controller 就不会去尝试创建新的 Pod。但是，它会不断地尝试重启 Pod 里的容器
+
+当一个 Job 的 Pod 运行结束后，它会进入 Completed 状态。但是，如果这个Pod 因为某种原因一直不肯结束呢？
+  在 Job 的 API 对象里，有一个 spec.activeDeadlineSeconds 字段可以设置最长运行时间；
+  一旦运行超过了设定时间，这个 Job 的所有 Pod 都会被终止，并且你可以在 Pod 的状态里看到终止的原因是 reason: DeadlineExceeded
+
+Job Controller对并行作业的控制方法：
+  在Job对象中，负责并行控制的参数有两个
+  1. spec.parallelism，它定义的是一个 Job 在任意时间最多可以启动多少个 Pod 同时运行；（当前最大数）
+  2. spec.completions，它定义的是 Job 至少要完成的 Pod 数目，即 Job 的最小完成数（最终完成数）
+  
+JobController 的工作原理：
+  首先，Job Controller 控制的对象，直接就是 Pod；
+  其次，Job Controller 在控制循环中进行的调谐（Reconcile）操作，是根据实际在Running 状态 Pod 的数目、已经成功退出的 Pod 的数目，以及 parallelism、completions 参数的值共同计算出在这个周期里，应该创建或者删除的 Pod 数目，然后调用 Kubernetes API 来执行这个操作
+
+CronJob是一个 Job 对象的控制器
+它创建和删除 Job 的依据，是 schedule 字段定义的、一个标准的Unix Cron格式的表达式，比如 "*/1 * * * *"，这意味着在正常情况下每隔一分钟会生成一个新的Job
+而这里要执行的内容，就是 jobTemplate 字段定义的 Job 了
+需要注意的是，由于定时任务的特殊性，很可能某个 Job 还没有执行完，另外一个新 Job就产生了。这时候，你可以通过 spec.concurrencyPolicy 字段来定义具体的处理策略。比如：
+  1. concurrencyPolicy=Allow，这也是默认情况，这意味着这些 Job 可以同时存在；
+  2. concurrencyPolicy=Forbid，这意味着不会创建新的 Pod，该创建周期被跳过；
+  3. concurrencyPolicy=Replace，这意味着新产生的 Job 会替换旧的、没有执行完的Job
+而如果某一次 Job 创建失败，这次创建就会被标记为“miss”。当在指定的时间窗口内，miss 的数目达到 100 时，那么 CronJob 会停止再创建这个 Job
+这个时间窗口，可以由 spec.startingDeadlineSeconds 字段指定。比如startingDeadlineSeconds=200，意味着在过去 200 s 里，如果 miss 的数目达到了 100次，那么这个 Job 就不会被创建执行了
+
+
+
 
