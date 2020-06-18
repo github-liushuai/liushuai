@@ -10,8 +10,13 @@ Istio 的控制层（Control Plane）里的 Pilot 组件，就能够通过调用
 举个例子，假如有两个Pod分别是新版本和旧版本的应用，Pilot 可以通过调节这两 Pod 里的 Envoy 容器的配置，从而将 90%的流量分配给旧版本的应用，将 10% 的流量分配给新版本应用，并且还可以在后续的过程中随时调整，直至所有流量全部分配给新版本，这就完成了这个灰度发布的过程
 
 明明需要往Pod里面注入Envoy容器，lstio又是怎么做到用户和应用对此都是完全“无感”的呢？
+答：Istio 项目使用的，是 Kubernetes 中的一个非常重要的功能，叫作 DynamicAdmission Control
+   我们先来介绍一下Admission Control：任何一个 API 对象被提交给 APIServer 之后，总有一些“初始化”性质的工作需要在它们被 Kubernetes 项目正式处理之前进行，
+   比如，自动为所有 Pod 加上某些标签（Labels），而这个“初始化”操作的实现就是借助Admission Control，它可以选择性地被编译进APIServer 中，在 API 对象创建之后会被立刻调用到；
+   我们无法使用 Admission Controller来添加自己的规则，因为这意味着要重新编译和重启APIServer；
+   所以，Kubernetes 项目为我们额外提供了一种“热插拔”式的 Admission 机制，它就是Dynamic Admission Control，也叫作：Initializer
 
-
+Istio 项目要做的，就是在这个 Pod YAML 被提交给 Kubernetes 之后，在它对应的 API 对象里自动加上 Envoy 容器的配置
 
 
 
