@@ -20,6 +20,15 @@ rules:
 这条规则的含义就是：允许“被作用者”，对 mynamespace 下面的 Pod 对象，进行 GET、WATCH 和 LIST 操作
 Kubernetes（v1.11）里能够对 API 对象进行的所有操作如下：
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"] 
+Role 对象的 rules 字段也可以进一步细化。比如，你可以只针对某一个具体的对象进行权限设置，如下所示：
+"""
+rules:
+- apiGroups: [""]  
+  resources: ["configmaps"]  
+  resourceNames: ["my-config"]  
+  verbs: ["get"]
+"""
+这个例子就表示，这条规则的“被作用者”，只对名叫“my-config”的 ConfigMap 对象，有进行 GET 操作的权限
 
 “被作用者”需要通过RoleBinding来指定：
 """
