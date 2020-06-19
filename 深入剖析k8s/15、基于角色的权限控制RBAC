@@ -1,2 +1,22 @@
 在 Kubernetes 项目中，负责完成授权（Authorization）工作的机制，就是 RBAC：基于角色的访问控制（Role-Based Access Control）
 
+三个最基本的概念：
+  1. Role：角色，它其实是一组规则，定义了一组对 Kubernetes API 对象的操作权限
+  2. Subject：被作用者，既可以是“人”，也可以是“机器”，也可以使你在 Kubernetes里定义的“用户”
+  3. RoleBinding：定义了“被作用者”和“角色”的绑定关系
+  
+先来看下role的定义方式：
+"""
+kind: Roleapi
+Version: rbac.authorization.k8s.io/v1
+metadata:  
+  namespace: mynamespace  
+  name: example-role
+rules:
+- apiGroups: [""]  
+  resources: ["pods"]  
+  verbs: ["get", "watch", "list"]  
+"""
+这条规则的含义就是：允许“被作用者”，对 mynamespace 下面的 Pod 对象，进行 GET、WATCH 和 LIST 操作
+
+“被作用者”
