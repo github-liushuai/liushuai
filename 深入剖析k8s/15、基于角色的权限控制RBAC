@@ -69,7 +69,8 @@ Role 和 RoleBinding 对象都是 Namespaced 对象（NamespacedObject），它�
   """
   在绑定后，我们可以看到Kubernetes 会为一个 ServiceAccount 自动创建并分配一个 Secret 对象，这个 Secret就是这个 ServiceAccount 对应的、用来跟 APIServer 进行交互的授权文件，我们一般称它为Token；
   Token 文件的内容一般是证书或者密码，它以一个 Secret对象的方式保存在 Etcd 当中
-  当某个pod声明使用某个ServiceAccount时，ServiceAccount 的 token也就是一个Secret 对象，就会被自动挂载到容器的/var/run/secrets/kubernetes.io/serviceaccount 目录下，容器里的应用就可以使用这个 ca.crt 来访问 APIServer 了
+  当某个pod声明使用某个ServiceAccount时，ServiceAccount 的 token也就是一个Secret 对象，就会被自动挂载到容器的/var/run/secrets/kubernetes.io/serviceaccount 目录下，容器里的应用就可以使用这个 ca.crt 来访问 APIServer 了，
+  更重要的是，此时它只能够做我们赋予权限的操作，因为 example-sa 这个 ServiceAccount 的权限，已经被我们绑定了 Role 做了限制
   """
   $ kubectl describe pod sa-token-test -n mynamespace
   ...
@@ -84,5 +85,39 @@ Role 和 RoleBinding 对象都是 Namespaced 对象（NamespacedObject），它�
 对于非 Namespaced（Non-namespaced）对象（比如：Node），或者某一个 Role 想要作用于所有的 Namespace 的时候，就需要使用 ClusterRole 和 ClusterRoleBinding 这两个组合了；
 这两个API 对象的用法跟 Role 和 RoleBinding 完全一样，只不过它们的定义里，没有了Namespace 字段
 
+除了前面使用的“用户”（User），Kubernetes 还拥有“用户组”（Group）的概念，也就是一组“用户”的意思
+  一个 ServiceAccount，在 Kubernetes 里对应的“用户”的名字是：system:serviceaccount:<ServiceAccount名字>，需要在subjects定义中指定Namespace，否则会在所有Namespace中查找该serviceaccount
+  一组 ServiceAccount，在 Kubernetes 里对应的“用户组”的名字是：system:serviceaccounts:<Namespace名字>，表示某Namespace下所有serviceaccount
+  """
+  subjects:
+  - kind: Group  
+    name: system:serviceaccounts:mynamespace  
+    apiGroup: rbac.authorization.k8s.io
+  """
 
+在 Kubernetes 中已经内置了很多个为系统保留的 ClusterRole，它们的名字都以 system: 开头，一般来说这些系统 ClusterRole，是绑定给 Kubernetes 系统组件对应的ServiceAccount 使用的，
+比如，其中一个名叫 system:kube-scheduler 的 ClusterRole，定义的权限规则是 kube-scheduler（Kubernetes 的调度器组件）运行所需要的必要权限，可以通过如下指令查看这些权限的列表：
+$ kubectl describe clusterrole system:kube-scheduler
 
+除此之外，Kubernetes 还提供了四个预先定义好的 ClusterRole 来供用户直接使用：
+  1. cluster-admin；
+  2. admin；
+  3. edit；
+  4. view
+cluster-admin 角色，对应的是整个 Kubernetes 项目中的最高权限（verbs=*），所以，请你务必要谨慎而小心地使用 cluster-admin
+
+前面我们提到过，如果一个 Pod 没有声明 serviceAccountName，Kubernetes 会自动在它的 Namespace 下创建一个名叫 default 的默认 ServiceAccount，然后分配给这个 Pod，
+  这个默认的ServiceAccount是没有绑定任何Role的，所以有访问绝大部分APIServer的权限，所以需要为这些default的ServiceAccount添加只能View的权限：
+  """
+  kind: ClusterRoleBinding
+  apiVersion: rbac.authorization.k8s.io/v1
+  metadata:
+    name: readonly-all-default
+  subjects:
+  - kind: ServiceAccount
+    name: system.serviceaccount.default
+  roleRef:
+    kind: ClusterRole
+    name: view
+    apiGroup: rbac.authorization.k8s.io
+  """
