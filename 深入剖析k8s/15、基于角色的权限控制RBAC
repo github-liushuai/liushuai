@@ -47,8 +47,39 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 """
 roleRef正是用来定义“被作用者（Subject）”和“角色（Role）”之间绑定关系的字段
-Role 和 RoleBinding 对象都是 Namespaced 对象（NamespacedObject），它们对权限的限制规则仅在它们自己的 Namespace 内有效；
-roleRef 也只能引用当前 Namespace 里的 Role 对象
+Role 和 RoleBinding 对象都是 Namespaced 对象（NamespacedObject），它们对权限的限制规则仅在它们自己的 Namespace 内有效；roleRef 也只能引用当前 Namespace 里的 Role 对象
+我们最常绑定的对象就是ServiceAccount，所以这里要重点掌握一下
+  首先我们要创建ServiceAccount，其定义非常简单
+  """
+  apiVersion: v1
+  kind: ServiceAccount
+  metadata:  
+    namespace: mynamespace  
+    name: example-sa
+  """
+  
+  然后，我们就可以通过编写 RoleBinding 的 YAML 文件，来为这个 ServiceAccount 分配权限
+  """
+  ...
+  subjects:
+  - kind: ServiceAccount  
+    name: example-sa  
+    namespace: mynamespace
+  ...
+  """
+  在绑定后，我们可以看到Kubernetes 会为一个 ServiceAccount 自动创建并分配一个 Secret 对象，这个 Secret就是这个 ServiceAccount 对应的、用来跟 APIServer 进行交互的授权文件，我们一般称它为Token；
+  Token 文件的内容一般是证书或者密码，它以一个 Secret对象的方式保存在 Etcd 当中
+  当某个pod声明使用某个ServiceAccount时，ServiceAccount 的 token也就是一个Secret 对象，就会被自动挂载到容器的/var/run/secrets/kubernetes.io/serviceaccount 目录下，容器里的应用就可以使用这个 ca.crt 来访问 APIServer 了
+  """
+  $ kubectl describe pod sa-token-test -n mynamespace
+  ...
+      Mounts:      
+        /var/run/secrets/kubernetes.io/serviceaccount from example-sa-token-vmfg6 (ro)
+  ...
+  $ kubectl exec -it sa-token-test -n mynamespace -- /bin/bash
+  root@sa-token-test:/# ls /var/run/secrets/kubernetes.io/serviceaccount
+  ca.crt namespace  token
+  """
 
 对于非 Namespaced（Non-namespaced）对象（比如：Node），或者某一个 Role 想要作用于所有的 Namespace 的时候，就需要使用 ClusterRole 和 ClusterRoleBinding 这两个组合了；
 这两个API 对象的用法跟 Role 和 RoleBinding 完全一样，只不过它们的定义里，没有了Namespace 字段
