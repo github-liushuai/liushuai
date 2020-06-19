@@ -18,5 +18,31 @@ rules:
   verbs: ["get", "watch", "list"]  
 """
 这条规则的含义就是：允许“被作用者”，对 mynamespace 下面的 Pod 对象，进行 GET、WATCH 和 LIST 操作
+Kubernetes（v1.11）里能够对 API 对象进行的所有操作如下：
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"] 
 
-“被作用者”
+“被作用者”需要通过RoleBinding来指定：
+"""
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:  
+  name: example-rolebinding  
+  namespace: mynamespace
+subjects:
+- kind: User  
+  name: example-user  
+  apiGroup: rbac.authorization.k8s.io
+roleRef:  
+  kind: Role  
+  name: example-role  
+  apiGroup: rbac.authorization.k8s.io
+"""
+roleRef正是用来定义“被作用者（Subject）”和“角色（Role）”之间绑定关系的字段
+Role 和 RoleBinding 对象都是 Namespaced 对象（NamespacedObject），它们对权限的限制规则仅在它们自己的 Namespace 内有效；
+roleRef 也只能引用当前 Namespace 里的 Role 对象
+
+对于非 Namespaced（Non-namespaced）对象（比如：Node），或者某一个 Role 想要作用于所有的 Namespace 的时候，就需要使用 ClusterRole 和 ClusterRoleBinding 这两个组合了；
+这两个API 对象的用法跟 Role 和 RoleBinding 完全一样，只不过它们的定义里，没有了Namespace 字段
+
+
+
