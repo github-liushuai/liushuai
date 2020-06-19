@@ -107,17 +107,17 @@ $ kubectl describe clusterrole system:kube-scheduler
 cluster-admin 角色，对应的是整个 Kubernetes 项目中的最高权限（verbs=*），所以，请你务必要谨慎而小心地使用 cluster-admin
 
 前面我们提到过，如果一个 Pod 没有声明 serviceAccountName，Kubernetes 会自动在它的 Namespace 下创建一个名叫 default 的默认 ServiceAccount，然后分配给这个 Pod，
-  这个默认的ServiceAccount是没有绑定任何Role的，所以有访问绝大部分APIServer的权限，所以需要为这些default的ServiceAccount添加只能View的权限：
-  """
-  kind: ClusterRoleBinding
-  apiVersion: rbac.authorization.k8s.io/v1
-  metadata:
-    name: readonly-all-default
-  subjects:
-  - kind: ServiceAccount
-    name: system.serviceaccount.default
-  roleRef:
-    kind: ClusterRole
-    name: view
-    apiGroup: rbac.authorization.k8s.io
-  """
+这个默认的ServiceAccount是没有绑定任何Role的，所以有访问绝大部分APIServer的权限，所以需要为这些default的ServiceAccount添加只能View的权限：
+"""
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: readonly-all-default
+subjects:
+- kind: ServiceAccount
+  name: system.serviceaccount.default
+roleRef:
+  kind: ClusterRole
+  name: view
+  apiGroup: rbac.authorization.k8s.io
+"""
