@@ -34,3 +34,14 @@ Kubernetes 中，实际上存在着一个专门处理持久化存储的控制器
   这样同 kubelet 的主循环解耦的好处：避免了这些耗时的远程挂载操作拖慢 kubelet 的主控制循环，进而导致 Pod 的创建效率大幅下降的问题
   kubelet 的一个主要设计原则，就是它的主控制循环绝对不可以被 block
 
+DynamicProvisioning：Kubernetes 为我们提供的一套可以自动创建 PV 的机制
+Static Provisioning：前面人工管理 PV 的方式
+StorageClass：创建PV的模板，它会定义两部分内容
+  1、PV 的属性，比如存储类型、Volume 的大小等等
+  2、创建这种 PV 需要用到的存储插件，比如Ceph 等等
+  有了这样两个信息之后，Kubernetes 就能够根据用户提交的 PVC，找到一个对应的StorageClass 了。然后，Kubernetes 就会调用该 StorageClass 声明的存储插件，创建出需要的 PV
+
+我们可以先创建出StorageClass对象，然后在 PVC 里指定要使用的 StorageClass 名字，Kubernetes就会调用相应的存储api创建与之对应的PV对象并自动绑定
+
+
+
